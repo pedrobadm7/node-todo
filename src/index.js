@@ -11,7 +11,6 @@ app.use(express.json());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
   const {username} = request.headers;
 
   const user = users.find(user => user.username === username);
@@ -25,8 +24,6 @@ function checksExistsUserAccount(request, response, next) {
 }
 
 app.post('/users', (request, response) => {
-  // Complete aqui
-
   const {name, username} = request.body;
 
   const userAlreadyExists = users.some((user) => user.username === username);
@@ -35,9 +32,11 @@ app.post('/users', (request, response) => {
     return response.status(400).json({error: "Customer already exists!"})
   }
 
-  users.push({id: uuidv4(), name, username, todos: []})
+  const user = {id: uuidv4(), name, username, todos: []}
 
-  return response.status(201).send();
+  users.push(user)
+
+  return response.status(201).json(user);
 });
 
 app.get('/users', (request, response) => {
@@ -46,44 +45,36 @@ app.get('/users', (request, response) => {
 
 app.get('/todos', checksExistsUserAccount, (request, response) => {
   const {user} = request
-  return response.json(user.todos);
+  const {todos} = user;
+  return response.json(todos);
 });
 
 app.post('/todos', checksExistsUserAccount, (request, response) => {
-  // Complete aqui
-
   const {title, deadline} = request.body;
   const {user} = request;
 
-  user.todos.push({id: uuidv4(), title, done: false, deadline: new Date(deadline), created_at: new Date()});
+  const todo = {id: uuidv4(), title, done: false, deadline: new Date(deadline), created_at: new Date()}
 
-  return response.status(201).send();
+  user.todos.push(todo);
+
+  return response.status(201).json(todo);
 });
 
 app.put('/todos/:id', checksExistsUserAccount, (request, response) => {
-  // Complete aqui
   const {title, deadline} = request.body;
   const {id} = request.params;
   const {user} = request;
 
-  if (!id) {
-    return response.status(400).json({error: 'You need to specify an ID'})
+  const todo = user.todos.find(todo => todo.id === id);
+
+  if (!todo) {
+    return response.status(404).json({error: 'This to do does not exists'})
   }
 
-  const validId = user.todos.find((todo) => todo.id === id);
+  todo.title = title;
+  todo.deadline = new Date(deadline);
 
-  if (!validId) {
-    return response.status(400).json({error: 'Invalid ID'})
-  }
-
-  user.todos.map((todo) => {
-    if (todo.id === id) {
-      todo.title = title,
-      todo.deadline = deadline
-    }
-  })
-
-  return response.status(201).send()
+  return response.json(todo);
 });
 
 app.patch('/todos/:id/done', checksExistsUserAccount, (request, response) => {
@@ -92,44 +83,30 @@ app.patch('/todos/:id/done', checksExistsUserAccount, (request, response) => {
   const {id} = request.params;
   const {user} = request;
 
-  if (!id) {
-    return response.status(400).json({error: 'You need to specify an ID'})
+  const todo = user.todos.find((todo) => todo.id === id);
+
+  if (!todo) {
+    return response.status(404).json({error: 'This to do does not exists'})
   }
 
-  const validId = user.todos.find((todo) => todo.id === id);
+  todo.done = true;
 
-  if (!validId) {
-    return response.status(400).json({error: 'Invalid ID'})
-  }
-
-  user.todos.map((todo) => {
-    if (todo.id === id) {
-      todo.done = true
-    }
-  })
-
-  return response.status(201).send()
+  return response.json(todo);
 });
 
 app.delete('/todos/:id', checksExistsUserAccount, (request, response) => {
-  // Complete aqui
-
   const {id} = request.params;
   const {user} = request;
 
-  if (!id) {
-    return response.status(400).json({error: 'You need to specify an ID'})
-  }
+  const todoIndex = user.todos.findIndex(todo => todo.id === id);
 
-  const validId = user.todos.find((todo) => todo.id === id);
+  if (todoIndex === -1) {
+    return response.status(404).json({error: 'To do not found'})
+  };
 
-  if (!validId) {
-    return response.status(400).json({error: 'Invalid ID'})
-  }
+  user.todos.splice(todoIndex, 1);
 
-  user.todos.splice(id, 1);
-
-  return response.status(204).json(user.todos);
+  return response.status(204).json(users)
 });
 
 module.exports = app;
